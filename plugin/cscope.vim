@@ -151,6 +151,9 @@ function! s:_CreateDB(dir, init)
   exec 'cs kill '.cscope_db
   redir @x
   exec 'silent !'.g:cscope_cmd.' -b -i '.cscope_files.' -f'.cscope_db
+  " it is necessary to redraw the screen after runing external comand under
+  " the silent mode. Otherwise the screen may trun to be black.
+  exec 'redraw!'
   redi END
   if @x =~ "\nCommand terminated\n"
     echohl WarningMsg | echo "Failed to create cscope database for ".a:dir.", please check if " | echohl None
@@ -305,7 +308,7 @@ function! s:preloadDB()
   endfor
 endfunction
 
-function! CscopeFind(action, word)
+function! RealCscopeFind(action, word)
   let dirtyDirs = []
   for d in keys(s:dbs)
     if s:dbs[d]['dirty'] == 1
@@ -324,7 +327,20 @@ function! CscopeFind(action, word)
       endif
     catch
       echohl WarningMsg | echo 'Can not find '.a:word.' with querytype as '.a:action.'.' | echohl None
+      " add return value
+      return 1
     endtry
+  endif
+  " add return value
+  return 0
+endfunction
+
+" wrapped CscopeFind() with ToggleLocationList()
+function! CscopeFind(action, word)
+  if RealCscopeFind(a:action, a:word) == 0
+    if a:action == 'g'
+      call ToggleLocationList()
+    endif
   endif
 endfunction
 
